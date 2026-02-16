@@ -19,3 +19,6 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# Docker
+docker-compose.override.yml

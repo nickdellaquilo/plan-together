@@ -15,7 +15,11 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "db:migrate": "npm run migrate --workspace=@plan-together/database",
     "db:migrate:down": "npm run migrate:down --workspace=@plan-together/database",
-    "db:migrate:create": "npm run migrate:create --workspace=@plan-together/database"
+    "db:migrate:create": "npm run migrate:create --workspace=@plan-together/database",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart"
   },
   "devDependencies": {
     "turbo": "^1.11.2"
