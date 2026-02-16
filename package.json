@@ -1,6 +1,6 @@
 {
   "name": "plan-together",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Plan Together - Social coordination platform",
   "workspaces": [
@@ -12,7 +12,10 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:migrate": "npm run migrate --workspace=@plan-together/database",
+    "db:migrate:down": "npm run migrate:down --workspace=@plan-together/database",
+    "db:migrate:create": "npm run migrate:create --workspace=@plan-together/database"
   },
   "devDependencies": {
     "turbo": "^1.11.2"

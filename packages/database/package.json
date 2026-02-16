@@ -1,0 +1,19 @@
+{
+  "name": "@plan-together/database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Database migrations and utilities",
+  "main": "src/index.js",
+  "scripts": {
+    "migrate": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "migrate:create": "node-pg-migrate create"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "node-pg-migrate": "^6.2.2"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
