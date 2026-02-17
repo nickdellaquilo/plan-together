@@ -69,8 +69,9 @@ app.get('/api', (req, res) => {
   });
 });
 
-// API Routes will go here
-// app.use('/api/auth', authRoutes);
+// API Routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 // app.use('/api/profile', profileRoutes);
 // app.use('/api/friends', friendsRoutes);
 
