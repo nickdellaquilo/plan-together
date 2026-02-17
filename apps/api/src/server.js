@@ -72,10 +72,11 @@ app.get('/api', (req, res) => {
 // API Routes
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
+const friendsRoutes = require('./routes/friends');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
-// app.use('/api/friends', friendsRoutes);
+app.use('/api/friends', friendsRoutes);
 
 // 404 handler
 app.use((req, res) => {
