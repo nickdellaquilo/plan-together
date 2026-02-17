@@ -9,7 +9,11 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:web": "turbo run dev --filter=web",
     "build": "turbo run build",
+    "build:api": "turbo run build --filter=api",
+    "build:web": "turbo run build --filter=web",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
