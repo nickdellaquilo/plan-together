@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -82,8 +83,16 @@ function App() {
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            }
-          />
+              }
+            />
+            <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+              }
+            />
 
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" />} />
