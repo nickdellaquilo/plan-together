@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Friends from './pages/Friends';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -90,6 +91,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/friends"
+              element={
+              <ProtectedRoute>
+                <Friends />
               </ProtectedRoute>
               }
             />
