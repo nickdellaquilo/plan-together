@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { friendsAPI } from '../services/api';
-import { Users, UserPlus, Calendar, LogOut, User, Bell } from 'lucide-react';
+import { Users, UserPlus, Calendar, LogOut, User, Bell, CircleDashed } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -264,6 +264,44 @@ const Dashboard = () => {
             </h3>
             <p style={{ margin: 0, color: '#6b7280' }}>
               View and add friends • {friends.length} friends
+            </p>
+          </Link>
+
+          <Link to="/circles" style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            border: '2px solid #e5e7eb',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = '#667eea';
+            e.currentTarget.style.transform = 'translateY(-4px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = '#e5e7eb';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <CircleDashed size={24} color="white" />
+            </div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>
+              Friend Circles
+            </h3>
+            <p style={{ margin: 0, color: '#6b7280' }}>
+              Organize friends into groups
             </p>
           </Link>
 

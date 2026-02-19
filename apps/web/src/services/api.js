@@ -59,4 +59,16 @@ export const friendsAPI = {
   removeFriend: (friendId) => api.delete(`/friends/${friendId}`),
 };
 
+// Circles endpoints
+export const circlesAPI = {
+  getMyCircles: () => api.get('/circles/my-circles'),
+  getMemberOf: () => api.get('/circles/member-of'),
+  getCircle: (circleId) => api.get(`/circles/${circleId}`),
+  createCircle: (data) => api.post('/circles', data),
+  updateCircle: (circleId, data) => api.put(`/circles/${circleId}`, data),
+  deleteCircle: (circleId) => api.delete(`/circles/${circleId}`),
+  addMember: (circleId, userId) => api.post(`/circles/${circleId}/members`, { userId }),
+  removeMember: (circleId, userId) => api.delete(`/circles/${circleId}/members/${userId}`),
+};
+
 export default api;
