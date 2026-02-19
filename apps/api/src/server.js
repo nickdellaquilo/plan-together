@@ -73,10 +73,12 @@ app.get('/api', (req, res) => {
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const friendsRoutes = require('./routes/friends');
+const circlesRoutes = require('./routes/circles');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/friends', friendsRoutes);
+app.use('/api/circles', circlesRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -105,8 +107,8 @@ const server = app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════╗
 ║   Plan Together API                   ║
-║   Port: ${PORT.toString().padEnd(29)}║
-║   Environment: ${NODE_ENV.padEnd(22)}║
+║   Port: ${PORT.toString().padEnd(29)} ║
+║   Environment: ${NODE_ENV.padEnd(22)} ║
 ║   Status: Running ✓                   ║
 ╚═══════════════════════════════════════╝
   `);
