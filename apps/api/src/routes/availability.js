@@ -62,7 +62,10 @@ router.post('/',
   authenticateToken,
   [
     body('dayOfWeek').optional().isInt({ min: 0, max: 6 }),
-    body('specificDate').optional().isISO8601().toDate(),
+    body('specificDate')
+      .optional()
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage('Date must be in YYYY-MM-DD format'),
     body('startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('status').isIn(['free', 'busy', 'maybe']),
@@ -75,6 +78,16 @@ router.post('/',
     }
 
     const { dayOfWeek, specificDate, startTime, endTime, status, notes } = req.body;
+
+    // Add debug logging
+    console.log('Creating availability slot:', {
+      dayOfWeek,
+      specificDate,
+      startTime,
+      endTime,
+      status,
+      notes
+    });
 
     // Validate that exactly one of dayOfWeek or specificDate is provided
     if ((dayOfWeek !== undefined && specificDate !== undefined) ||
@@ -119,7 +132,8 @@ router.put('/:slotId',
     body('startTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('endTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('status').optional().isIn(['free', 'busy', 'maybe']),
-    body('notes').optional().trim(),
+    body('notes').optional(),
+    body('dayOfWeek').optional().isInt({ min: 0, max: 6 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -128,12 +142,12 @@ router.put('/:slotId',
     }
 
     const { slotId } = req.params;
-    const { startTime, endTime, status, notes } = req.body;
+    const { startTime, endTime, status, notes, dayOfWeek } = req.body;
 
     try {
       // Verify ownership
       const slotCheck = await query(
-        'SELECT id FROM availability_slots WHERE id = $1 AND user_id = $2',
+        'SELECT * FROM availability_slots WHERE id = $1 AND user_id = $2',
         [slotId, req.user.userId]
       );
 
@@ -159,7 +173,12 @@ router.put('/:slotId',
       }
       if (notes !== undefined) {
         updates.push(`notes = $${paramCount++}`);
-        values.push(notes);
+        values.push(notes === '' ? null : notes);
+      }
+      // Allow updating day_of_week for recurring slots
+      if (dayOfWeek !== undefined && slotCheck.rows[0].day_of_week !== null) {
+        updates.push(`day_of_week = $${paramCount++}`);
+        values.push(dayOfWeek);
       }
 
       if (updates.length === 0) {
@@ -168,12 +187,15 @@ router.put('/:slotId',
 
       values.push(slotId);
 
-      await query(
-        `UPDATE availability_slots SET ${updates.join(', ')} WHERE id = $${paramCount}`,
+      const result = await query(
+        `UPDATE availability_slots SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
         values
       );
 
-      res.json({ message: 'Availability slot updated' });
+      res.json({ 
+        message: 'Availability slot updated',
+        slot: result.rows[0]
+      });
     } catch (error) {
       console.error('Update availability error:', error);
       res.status(500).json({ error: 'Failed to update availability slot' });

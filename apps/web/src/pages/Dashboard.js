@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { friendsAPI } from '../services/api';
-import { Users, UserPlus, Calendar, LogOut, User, Bell, CircleDashed } from 'lucide-react';
+import { Users, UserPlus, Calendar, LogOut, User, Bell, CircleDashed, Clock } from 'lucide-react';
+import WeeklyAvailability from '../components/WeeklyAvailability';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -222,6 +223,36 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Weekly Availability */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
+              Next 7 Days
+            </h3>
+            <Link to="/availability" style={{
+              color: '#667eea',
+              textDecoration: 'none',
+              fontWeight: 500,
+              fontSize: '0.9rem'
+            }}>
+              Full calendar →
+            </Link>
+          </div>
+
+          <WeeklyAvailability />
+        </div>
+
         {/* Quick Actions */}
         <div style={{
           display: 'grid',
@@ -305,6 +336,44 @@ const Dashboard = () => {
             </p>
           </Link>
 
+          <Link to="/availability" style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            border: '2px solid #e5e7eb',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = '#667eea';
+            e.currentTarget.style.transform = 'translateY(-4px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = '#e5e7eb';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <Clock size={24} color="white" />
+            </div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>
+              My Availability
+            </h3>
+            <p style={{ margin: 0, color: '#6b7280' }}>
+              Manage your schedule
+            </p>
+          </Link>
+
           <div style={{
             background: 'white',
             borderRadius: '16px',
@@ -332,6 +401,8 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
+
+        
 
         {/* Friends List Preview */}
         {friends.length > 0 && (

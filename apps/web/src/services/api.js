@@ -71,4 +71,14 @@ export const circlesAPI = {
   removeMember: (circleId, userId) => api.delete(`/circles/${circleId}/members/${userId}`),
 };
 
+// Availability endpoints
+export const availabilityAPI = {
+  getMyAvailability: () => api.get('/availability/me'),
+  getUserAvailability: (userId) => api.get(`/availability/user/${userId}`),
+  createSlot: (data) => api.post('/availability', data),
+  updateSlot: (slotId, data) => api.put(`/availability/${slotId}`, data),
+  deleteSlot: (slotId) => api.delete(`/availability/${slotId}`),
+  findCommonFreeTime: (data) => api.post('/availability/common-free-time', data),
+};
+
 export default api;

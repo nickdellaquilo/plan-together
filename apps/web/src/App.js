@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Circles from './pages/Circles';
+import Availability from './pages/Availability';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -110,6 +111,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Circles />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/availability"
+              element={
+                <ProtectedRoute>
+                  <Availability />
                 </ProtectedRoute>
               }
             />
