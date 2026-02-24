@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { availabilityAPI } from '../services/api';
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Edit2, Trash2 } from 'lucide-react';
 import { slotMatchesDate, getRecurrenceDescription } from '../utils/recurrence';
+import { getSmartTimeDefaults, getDefaultDateForRecurrence } from '../utils/timeDefaults';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -116,6 +117,8 @@ const handleSubmit = async (e) => {
   };
 
 const openModal = (date, slot = null, isRecurring = false) => {
+  const smartTimes = getSmartTimeDefaults();
+  
   if (slot) {
     setEditingSlot(slot);
     setSelectedDate(slot.recurrence_type === 'once' ? new Date(slot.recurrence_start_date) : null);
@@ -137,11 +140,11 @@ const openModal = (date, slot = null, isRecurring = false) => {
       setFormData({
         recurrenceType: 'weekly',
         recurrenceInterval: 1,
-        recurrenceStartDate: new Date().toISOString().split('T')[0],
+        recurrenceStartDate: getDefaultDateForRecurrence('weekly'),
         recurrenceEndDate: '',
         dayOfWeek: date?.getDay() || 1,
-        startTime: '09:00',
-        endTime: '17:00',
+        startTime: smartTimes.startTime,
+        endTime: smartTimes.endTime,
         status: 'free',
         notes: ''
       });
@@ -153,14 +156,13 @@ const openModal = (date, slot = null, isRecurring = false) => {
         recurrenceStartDate: date.toISOString().split('T')[0],
         recurrenceEndDate: '',
         dayOfWeek: 1,
-        startTime: '09:00',
-        endTime: '17:00',
+        startTime: smartTimes.startTime,
+        endTime: smartTimes.endTime,
         status: 'free',
         notes: ''
       });
     }
   }
-  console.log('Opening modal with formData:', formData);
   setShowModal(true);
 };
 
@@ -797,9 +799,19 @@ const getSlotsForDate = (date) => {
                         padding: '0.75rem',
                         border: '2px solid #e5e7eb',
                         borderRadius: '8px',
-                        fontSize: '1rem'
+                        fontSize: '1rem',
                       }}
+                      onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                      onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                     />
+                    <small style={{ 
+                      color: '#9ca3af', 
+                      fontSize: '0.75rem',
+                      display: 'block',
+                      marginTop: '0.25rem'
+                    }}>
+                      Type YYYY-MM-DD or use picker
+                    </small>
                   </div>
 
                   <div>
@@ -887,9 +899,19 @@ const getSlotsForDate = (date) => {
                       border: '2px solid #e5e7eb',
                       borderRadius: '8px',
                       fontSize: '1rem',
-                      outline: 'none'
+                      outline: 'none',
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                    onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                   />
+                  <small style={{ 
+                    color: '#9ca3af', 
+                    fontSize: '0.75rem',
+                    display: 'block',
+                    marginTop: '0.25rem'
+                  }}>
+                    Type or use picker
+                  </small>
                 </div>
                 <div>
                   <label style={{

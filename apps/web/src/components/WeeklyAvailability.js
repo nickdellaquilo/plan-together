@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { availabilityAPI } from '../services/api';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { slotMatchesDate, getRecurrenceDescription } from '../utils/recurrence';
+import { getSmartTimeDefaults } from '../utils/timeDefaults';
 
 const WeeklyAvailability = () => {
   const [weekDates, setWeekDates] = useState([]);
@@ -11,12 +12,14 @@ const WeeklyAvailability = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [error, setError] = useState('');
 
-  const [formData, setFormData] = useState({
-    startTime: '09:00',
-    endTime: '17:00',
-    status: 'free',
-    notes: ''
-  });
+const smartTimes = getSmartTimeDefaults();
+
+const [formData, setFormData] = useState({
+  startTime: smartTimes.startTime,
+  endTime: smartTimes.endTime,
+  status: 'free',
+  notes: ''
+});
 
   useEffect(() => {
     // Generate next 7 days
@@ -95,28 +98,30 @@ const WeeklyAvailability = () => {
     }
   };
 
-  const openModal = (date, slot = null) => {
-    setSelectedDate(date);
-    if (slot && slot.specific_date) {
-      // Only allow editing specific date slots from here
-      setEditingSlot(slot);
-      setFormData({
-        startTime: slot.start_time.substring(0, 5),
-        endTime: slot.end_time.substring(0, 5),
-        status: slot.status,
-        notes: slot.notes || ''
-      });
-    } else {
-      setEditingSlot(null);
-      setFormData({
-        startTime: '09:00',
-        endTime: '17:00',
-        status: 'free',
-        notes: ''
-      });
-    }
-    setShowModal(true);
-  };
+const openModal = (date, slot = null) => {
+  const smartTimes = getSmartTimeDefaults();
+  
+  setSelectedDate(date);
+  if (slot && slot.specific_date) {
+    // Only allow editing specific date slots from here
+    setEditingSlot(slot);
+    setFormData({
+      startTime: slot.start_time.substring(0, 5),
+      endTime: slot.end_time.substring(0, 5),
+      status: slot.status,
+      notes: slot.notes || ''
+    });
+  } else {
+    setEditingSlot(null);
+    setFormData({
+      startTime: smartTimes.startTime,
+      endTime: smartTimes.endTime,
+      status: 'free',
+      notes: ''
+    });
+  }
+  setShowModal(true);
+};
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -144,17 +149,17 @@ const WeeklyAvailability = () => {
     return date.toDateString() === today.toDateString();
   };
 
-  const openRecurringModal = (slot) => {
-    setEditingSlot(slot);
-    setSelectedDate(null); // No specific date for recurring
-    setFormData({
-      startTime: slot.start_time.substring(0, 5),
-      endTime: slot.end_time.substring(0, 5),
-      status: slot.status,
-      notes: slot.notes || ''
-    });
-    setShowModal(true);
-  };
+const openRecurringModal = (slot) => {
+  setEditingSlot(slot);
+  setSelectedDate(null);
+  setFormData({
+    startTime: slot.start_time.substring(0, 5),
+    endTime: slot.end_time.substring(0, 5),
+    status: slot.status,
+    notes: slot.notes || ''
+  });
+  setShowModal(true);
+};
 
   return (
     <div>
