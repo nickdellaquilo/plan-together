@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { availabilityAPI } from '../services/api';
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Edit2, Trash2 } from 'lucide-react';
+import { slotMatchesDate, getRecurrenceDescription } from '../utils/recurrence';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -15,79 +16,91 @@ const Availability = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [formData, setFormData] = useState({
-    dayOfWeek: 1,
-    specificDate: '',
-    startTime: '09:00',
-    endTime: '17:00',
-    status: 'free',
-    notes: ''
-  });
+const [formData, setFormData] = useState({
+  recurrenceType: 'once',
+  recurrenceInterval: 1,
+  recurrenceStartDate: '',
+  recurrenceEndDate: '',
+  dayOfWeek: 1,
+  startTime: '09:00',
+  endTime: '17:00',
+  status: 'free',
+  notes: ''
+});
 
-  useEffect(() => {
-    loadAvailability();
-  }, []);
+useEffect(() => {
+  loadAvailability();
+}, []);
+const loadAvailability = async () => {
+  try {
+    const response = await availabilityAPI.getMyAvailability();
+    setSlots(response.data.slots);
+  } catch (error) {
+    console.error('Failed to load availability:', error);
+    setError('Failed to load availability');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const loadAvailability = async () => {
-    try {
-      const response = await availabilityAPI.getMyAvailability();
-      setSlots(response.data.slots);
-    } catch (error) {
-      console.error('Failed to load availability:', error);
-      setError('Failed to load availability');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  try {
+    const data = {
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      status: formData.status,
+      notes: formData.notes || ''
+    };
 
-    try {
-      const data = {
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        status: formData.status,
-        notes: formData.notes || ''
-      };
-
-      if (editingSlot) {
-        // When editing, include day of week for recurring slots
-        if (editingSlot.day_of_week !== null) {
-          data.dayOfWeek = parseInt(formData.dayOfWeek);
-        }
-        
-        await availabilityAPI.updateSlot(editingSlot.id, data);
-        setSuccess('Availability updated!');
-      } else {
-        // When creating new - selectedDate means specific date, otherwise recurring
-        if (selectedDate) {
-          data.specificDate = selectedDate.toISOString().split('T')[0];
-        } else {
-          data.dayOfWeek = parseInt(formData.dayOfWeek);
-        }
-        
-        await availabilityAPI.createSlot(data);
-        setSuccess('Availability added!');
+    if (editingSlot) {
+      // When editing, only update editable fields
+      data.recurrenceInterval = parseInt(formData.recurrenceInterval);
+      if (formData.recurrenceEndDate) {
+        data.recurrenceEndDate = formData.recurrenceEndDate;
+      }
+      
+      await availabilityAPI.updateSlot(editingSlot.id, data);
+      setSuccess('Availability updated!');
+    } else {
+      // When creating new
+      data.recurrenceType = formData.recurrenceType;
+      data.recurrenceInterval = parseInt(formData.recurrenceInterval);
+      data.recurrenceStartDate = selectedDate 
+        ? selectedDate.toISOString().split('T')[0]
+        : formData.recurrenceStartDate;
+      
+      if (formData.recurrenceEndDate) {
+        data.recurrenceEndDate = formData.recurrenceEndDate;
       }
 
-      setShowModal(false);
-      setEditingSlot(null);
-      setSelectedDate(null);
-      loadAvailability();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      console.error('Submit error:', error);
+      // Add day of week for weekly recurrence
+      if (formData.recurrenceType === 'weekly') {
+        data.dayOfWeek = parseInt(formData.dayOfWeek);
+      }
       
-      const errorMsg = error.response?.data?.errors 
-        ? error.response.data.errors.map(e => e.msg).join(', ')
-        : error.response?.data?.error 
-        || 'Failed to save availability';
-      
-      setError(errorMsg);
+      await availabilityAPI.createSlot(data);
+      setSuccess('Availability added!');
     }
-  };
+
+    setShowModal(false);
+    setEditingSlot(null);
+    setSelectedDate(null);
+    loadAvailability();
+    setTimeout(() => setSuccess(''), 3000);
+  } catch (error) {
+    console.error('Submit error:', error);
+    
+    const errorMsg = error.response?.data?.errors 
+      ? error.response.data.errors.map(e => e.msg).join(', ')
+      : error.response?.data?.error 
+      || 'Failed to save availability';
+    
+    setError(errorMsg);
+  }
+};
 
   const handleDelete = async (slotId) => {
     if (!window.confirm('Delete this availability slot?')) return;
@@ -102,44 +115,54 @@ const Availability = () => {
     }
   };
 
-  const openModal = (date, slot = null, isRecurring = false) => {
-    if (slot) {
-      setEditingSlot(slot);
-      setSelectedDate(slot.specific_date ? new Date(slot.specific_date) : null);
+const openModal = (date, slot = null, isRecurring = false) => {
+  if (slot) {
+    setEditingSlot(slot);
+    setSelectedDate(slot.recurrence_type === 'once' ? new Date(slot.recurrence_start_date) : null);
+    setFormData({
+      recurrenceType: slot.recurrence_type || 'once',
+      recurrenceInterval: slot.recurrence_interval || 1,
+      recurrenceStartDate: slot.recurrence_start_date ? slot.recurrence_start_date.split('T')[0] : '',
+      recurrenceEndDate: slot.recurrence_end_date ? slot.recurrence_end_date.split('T')[0] : '',
+      dayOfWeek: slot.day_of_week !== null ? slot.day_of_week : (date?.getDay() || 1),
+      startTime: slot.start_time.substring(0, 5),
+      endTime: slot.end_time.substring(0, 5),
+      status: slot.status,
+      notes: slot.notes || ''
+    });
+  } else {
+    setEditingSlot(null);
+    if (isRecurring) {
+      setSelectedDate(null);
       setFormData({
-        dayOfWeek: slot.day_of_week !== null ? slot.day_of_week : date?.getDay() || 1,
-        specificDate: slot.specific_date ? slot.specific_date.split('T')[0] : '',
-        startTime: slot.start_time.substring(0, 5),
-        endTime: slot.end_time.substring(0, 5),
-        status: slot.status,
-        notes: slot.notes || ''
+        recurrenceType: 'weekly',
+        recurrenceInterval: 1,
+        recurrenceStartDate: new Date().toISOString().split('T')[0],
+        recurrenceEndDate: '',
+        dayOfWeek: date?.getDay() || 1,
+        startTime: '09:00',
+        endTime: '17:00',
+        status: 'free',
+        notes: ''
       });
     } else {
-      setEditingSlot(null);
-      if (isRecurring) {
-        setSelectedDate(null);
-        setFormData({
-          dayOfWeek: date?.getDay() || 1,
-          specificDate: '',
-          startTime: '09:00',
-          endTime: '17:00',
-          status: 'free',
-          notes: ''
-        });
-      } else {
-        setSelectedDate(date);
-        setFormData({
-          dayOfWeek: 1,
-          specificDate: date.toISOString().split('T')[0],
-          startTime: '09:00',
-          endTime: '17:00',
-          status: 'free',
-          notes: ''
-        });
-      }
+      setSelectedDate(date);
+      setFormData({
+        recurrenceType: 'once',
+        recurrenceInterval: 1,
+        recurrenceStartDate: date.toISOString().split('T')[0],
+        recurrenceEndDate: '',
+        dayOfWeek: 1,
+        startTime: '09:00',
+        endTime: '17:00',
+        status: 'free',
+        notes: ''
+      });
     }
-    setShowModal(true);
-  };
+  }
+  console.log('Opening modal with formData:', formData);
+  setShowModal(true);
+};
 
   // Calendar generation functions
   const getDaysInMonth = (date) => {
@@ -184,21 +207,10 @@ const Availability = () => {
     return days;
   };
 
-  const getSlotsForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayOfWeek = date.getDay();
-
-    const specificSlots = slots.filter(s => {
-      if (!s.specific_date) return false;
-      const slotDate = s.specific_date.split('T')[0];
-      return slotDate === dateStr;
-    });
-    
-    const recurringSlots = slots.filter(s => s.day_of_week === dayOfWeek);
-
-    return [...specificSlots, ...recurringSlots]
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  };
+const getSlotsForDate = (date) => {
+  return slots.filter(slot => slotMatchesDate(slot, date))
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+};
 
   const previousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -501,7 +513,7 @@ const Availability = () => {
                   }}>
                     {daySlots.slice(0, 3).map(slot => {
                       const colors = getStatusColor(slot.status);
-                      const isRecurring = slot.day_of_week !== null;
+                      const isRecurring = slot.recurrence_type !== 'once';
                       
                       return (
                         <div
@@ -630,6 +642,224 @@ const Availability = () => {
             )}
 
             <form onSubmit={handleSubmit}>
+              {/* Recurrence Type & Day of Week - side by side when both visible */}
+              {!editingSlot && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: formData.recurrenceType === 'weekly' ? '1fr 1fr' : '1fr',
+                  gap: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: 600,
+                      color: '#333',
+                      fontSize: '0.9rem'
+                    }}>
+                      Recurrence Pattern
+                    </label>
+                    <select
+                      value={formData.recurrenceType}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        recurrenceType: e.target.value,
+                        recurrenceStartDate: selectedDate 
+                          ? selectedDate.toISOString().split('T')[0] 
+                          : new Date().toISOString().split('T')[0]
+                      })}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="once">One time</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
+
+                  {/* Day of Week - show inline for weekly recurrence */}
+                  {formData.recurrenceType === 'weekly' && (
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                        fontWeight: 600,
+                        color: '#333',
+                        fontSize: '0.9rem'
+                      }}>
+                        Day of Week
+                      </label>
+                      <select
+                        value={formData.dayOfWeek}
+                        onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          outline: 'none'
+                        }}
+                      >
+                        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
+                          <option key={index} value={index}>{day}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Show recurrence info when editing */}
+              {editingSlot && (
+                <div style={{
+                  padding: '0.75rem',
+                  background: '#f0f7ff',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  fontSize: '0.9rem',
+                  color: '#667eea'
+                }}>
+                  🔄 {getRecurrenceDescription(editingSlot)}
+                </div>
+              )}
+
+              {/* Interval - show for repeating patterns */}
+              {(formData.recurrenceType !== 'once' || editingSlot?.recurrence_type !== 'once') && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: 600,
+                    color: '#333',
+                    fontSize: '0.9rem'
+                  }}>
+                    Repeat Every
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.recurrenceInterval}
+                      onChange={(e) => setFormData({ ...formData, recurrenceInterval: e.target.value })}
+                      style={{
+                        width: '80px',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    <span style={{ color: '#6b7280' }}>
+                      {formData.recurrenceType === 'daily' && 'day(s)'}
+                      {formData.recurrenceType === 'weekly' && 'week(s)'}
+                      {formData.recurrenceType === 'monthly' && 'month(s)'}
+                      {formData.recurrenceType === 'yearly' && 'year(s)'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Start Date & End Date - side by side for recurring */}
+              {!editingSlot && formData.recurrenceType !== 'once' && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: 600,
+                      color: '#333',
+                      fontSize: '0.9rem'
+                    }}>
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.recurrenceStartDate}
+                      onChange={(e) => setFormData({ ...formData, recurrenceStartDate: e.target.value })}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: 600,
+                      color: '#333',
+                      fontSize: '0.9rem'
+                    }}>
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.recurrenceEndDate}
+                      onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                      min={formData.recurrenceStartDate}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* End Date only - for editing recurring events */}
+              {editingSlot && editingSlot.recurrence_type !== 'once' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: 600,
+                    color: '#333',
+                    fontSize: '0.9rem'
+                  }}>
+                    End Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.recurrenceEndDate}
+                    onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: '0.8rem', display: 'block', marginTop: '0.25rem' }}>
+                    Leave empty to repeat indefinitely
+                  </small>
+                </div>
+              )}
+
+              {/* Start Time & End Time - side by side */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -641,7 +871,8 @@ const Availability = () => {
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: 600,
-                    color: '#333'
+                    color: '#333',
+                    fontSize: '0.9rem'
                   }}>
                     Start Time
                   </label>
@@ -665,7 +896,8 @@ const Availability = () => {
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: 600,
-                    color: '#333'
+                    color: '#333',
+                    fontSize: '0.9rem'
                   }}>
                     End Time
                   </label>
@@ -686,12 +918,14 @@ const Availability = () => {
                 </div>
               </div>
 
+              {/* Status */}
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: 600,
-                  color: '#333'
+                  color: '#333',
+                  fontSize: '0.9rem'
                 }}>
                   Status
                 </label>
@@ -713,12 +947,14 @@ const Availability = () => {
                 </select>
               </div>
 
+              {/* Notes */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: 600,
-                  color: '#333'
+                  color: '#333',
+                  fontSize: '0.9rem'
                 }}>
                   Notes (Optional)
                 </label>
@@ -739,6 +975,7 @@ const Availability = () => {
                 />
               </div>
 
+              {/* Buttons */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 {editingSlot && (
                   <button
@@ -754,7 +991,8 @@ const Availability = () => {
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      fontSize: '0.9rem'
                     }}
                   >
                     Delete
@@ -775,7 +1013,8 @@ const Availability = () => {
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
                   }}
                 >
                   Cancel
@@ -790,10 +1029,11 @@ const Availability = () => {
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
                   }}
                 >
-                  {editingSlot ? 'Save Changes' : 'Add'}
+                  {editingSlot ? 'Save' : 'Add'}
                 </button>
               </div>
             </form>

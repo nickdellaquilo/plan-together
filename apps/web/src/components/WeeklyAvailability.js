@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { availabilityAPI } from '../services/api';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { slotMatchesDate, getRecurrenceDescription } from '../utils/recurrence';
 
 const WeeklyAvailability = () => {
   const [weekDates, setWeekDates] = useState([]);
@@ -40,23 +41,9 @@ const WeeklyAvailability = () => {
   };
 
   const getSlotsForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const dayOfWeek = date.getDay();
-
-    // Get specific slots for this date - normalize the comparison
-    const specificSlots = slots.filter(s => {
-      if (!s.specific_date) return false;
-      // Extract just the date part from the timestamp
-      const slotDate = s.specific_date.split('T')[0];
-      return slotDate === dateStr;
-    });
-    
-    // Get recurring slots for this day of week
-    const recurringSlots = slots.filter(s => s.day_of_week === dayOfWeek);
-
-    return [...specificSlots, ...recurringSlots]
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  };
+  return slots.filter(slot => slotMatchesDate(slot, date))
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -235,7 +222,7 @@ const WeeklyAvailability = () => {
               }}>
                 {daySlots.map(slot => {
                   const colors = getStatusColor(slot.status);
-                  const isRecurring = slot.day_of_week !== null;
+                  const isRecurring = slot.recurrence_type !== 'once';
                   
                   return (
                     <div

@@ -74,6 +74,8 @@ export const circlesAPI = {
 // Availability endpoints
 export const availabilityAPI = {
   getMyAvailability: () => api.get('/availability/me'),
+  getAvailabilityRange: (startDate, endDate) => 
+    api.get('/availability/range', { params: { startDate, endDate } }),
   getUserAvailability: (userId) => api.get(`/availability/user/${userId}`),
   createSlot: (data) => api.post('/availability', data),
   updateSlot: (slotId, data) => api.put(`/availability/${slotId}`, data),

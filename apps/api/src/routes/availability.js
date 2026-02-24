@@ -4,6 +4,52 @@ const { body, validationResult } = require('express-validator');
 const { query } = require('@plan-together/database');
 const { authenticateToken } = require('../middleware/auth');
 
+// Helper function to check if a recurring slot applies to a specific date
+function slotMatchesDate(slot, targetDate) {
+  const target = new Date(targetDate);
+  const startDate = new Date(slot.recurrence_start_date);
+  const endDate = slot.recurrence_end_date ? new Date(slot.recurrence_end_date) : null;
+
+  // Check if target is within range
+  if (target < startDate) return false;
+  if (endDate && target > endDate) return false;
+
+  switch (slot.recurrence_type) {
+    case 'once':
+      return slot.recurrence_start_date === targetDate.split('T')[0];
+    
+    case 'daily': {
+      const daysDiff = Math.floor((target - startDate) / (1000 * 60 * 60 * 24));
+      return daysDiff >= 0 && daysDiff % slot.recurrence_interval === 0;
+    }
+    
+    case 'weekly': {
+      if (target.getDay() !== slot.day_of_week) return false;
+      const weeksDiff = Math.floor((target - startDate) / (1000 * 60 * 60 * 24 * 7));
+      return weeksDiff >= 0 && weeksDiff % slot.recurrence_interval === 0;
+    }
+    
+    case 'monthly': {
+      const monthsDiff = (target.getFullYear() - startDate.getFullYear()) * 12 
+                        + (target.getMonth() - startDate.getMonth());
+      return monthsDiff >= 0 
+        && monthsDiff % slot.recurrence_interval === 0
+        && target.getDate() === startDate.getDate();
+    }
+    
+    case 'yearly': {
+      const yearsDiff = target.getFullYear() - startDate.getFullYear();
+      return yearsDiff >= 0 
+        && yearsDiff % slot.recurrence_interval === 0
+        && target.getMonth() === startDate.getMonth()
+        && target.getDate() === startDate.getDate();
+    }
+    
+    default:
+      return false;
+  }
+}
+
 // Get user's availability (both recurring and specific dates)
 router.get('/me', authenticateToken, async (req, res) => {
   try {
@@ -61,11 +107,11 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 router.post('/',
   authenticateToken,
   [
+    body('recurrenceType').isIn(['once', 'daily', 'weekly', 'monthly', 'yearly']),
+    body('recurrenceInterval').isInt({ min: 1 }).withMessage('Interval must be at least 1'),
+    body('recurrenceStartDate').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Start date required (YYYY-MM-DD)'),
+    body('recurrenceEndDate').optional().matches(/^\d{4}-\d{2}-\d{2}$/),
     body('dayOfWeek').optional().isInt({ min: 0, max: 6 }),
-    body('specificDate')
-      .optional()
-      .matches(/^\d{4}-\d{2}-\d{2}$/)
-      .withMessage('Date must be in YYYY-MM-DD format'),
     body('startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('status').isIn(['free', 'busy', 'maybe']),
@@ -77,36 +123,37 @@ router.post('/',
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { dayOfWeek, specificDate, startTime, endTime, status, notes } = req.body;
-
-    // Add debug logging
-    console.log('Creating availability slot:', {
+    const { 
+      recurrenceType, 
+      recurrenceInterval, 
+      recurrenceStartDate, 
+      recurrenceEndDate,
       dayOfWeek,
-      specificDate,
-      startTime,
-      endTime,
-      status,
-      notes
-    });
-
-    // Validate that exactly one of dayOfWeek or specificDate is provided
-    if ((dayOfWeek !== undefined && specificDate !== undefined) ||
-        (dayOfWeek === undefined && specificDate === undefined)) {
-      return res.status(400).json({ 
-        error: 'Must provide either dayOfWeek (for recurring) or specificDate (for one-time)' 
-      });
-    }
+      startTime, 
+      endTime, 
+      status, 
+      notes 
+    } = req.body;
 
     try {
+      // For backwards compatibility, also set old fields
+      const specificDate = recurrenceType === 'once' ? recurrenceStartDate : null;
+      const dayOfWeekValue = recurrenceType === 'weekly' ? dayOfWeek : null;
+
       const result = await query(
         `INSERT INTO availability_slots 
-         (user_id, day_of_week, specific_date, start_time, end_time, status, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (user_id, recurrence_type, recurrence_interval, recurrence_start_date, 
+          recurrence_end_date, day_of_week, specific_date, start_time, end_time, status, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
           req.user.userId,
-          dayOfWeek !== undefined ? dayOfWeek : null,
-          specificDate || null,
+          recurrenceType,
+          recurrenceInterval,
+          recurrenceStartDate,
+          recurrenceEndDate || null,
+          dayOfWeekValue,
+          specificDate,
           startTime,
           endTime,
           status,
@@ -133,7 +180,8 @@ router.put('/:slotId',
     body('endTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('status').optional().isIn(['free', 'busy', 'maybe']),
     body('notes').optional(),
-    body('dayOfWeek').optional().isInt({ min: 0, max: 6 }),
+    body('recurrenceInterval').optional().isInt({ min: 1 }),
+    body('recurrenceEndDate').optional().matches(/^\d{4}-\d{2}-\d{2}$/),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -142,7 +190,7 @@ router.put('/:slotId',
     }
 
     const { slotId } = req.params;
-    const { startTime, endTime, status, notes, dayOfWeek } = req.body;
+    const { startTime, endTime, status, notes, recurrenceInterval, recurrenceEndDate } = req.body;
 
     try {
       // Verify ownership
@@ -175,10 +223,13 @@ router.put('/:slotId',
         updates.push(`notes = $${paramCount++}`);
         values.push(notes === '' ? null : notes);
       }
-      // Allow updating day_of_week for recurring slots
-      if (dayOfWeek !== undefined && slotCheck.rows[0].day_of_week !== null) {
-        updates.push(`day_of_week = $${paramCount++}`);
-        values.push(dayOfWeek);
+      if (recurrenceInterval !== undefined) {
+        updates.push(`recurrence_interval = $${paramCount++}`);
+        values.push(recurrenceInterval);
+      }
+      if (recurrenceEndDate !== undefined) {
+        updates.push(`recurrence_end_date = $${paramCount++}`);
+        values.push(recurrenceEndDate || null);
       }
 
       if (updates.length === 0) {
@@ -274,5 +325,49 @@ router.post('/common-free-time',
     }
   }
 );
+
+// Get availability for a date range (for calendar views)
+router.get('/range', authenticateToken, async (req, res) => {
+  const { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate required' });
+  }
+
+  try {
+    // Get all user's slots that could possibly match
+    const result = await query(
+      `SELECT * FROM availability_slots 
+       WHERE user_id = $1 
+       AND (
+         recurrence_end_date IS NULL 
+         OR recurrence_end_date >= $2
+       )
+       AND recurrence_start_date <= $3
+       ORDER BY start_time`,
+      [req.user.userId, startDate, endDate]
+    );
+
+    // Filter slots by date matching logic
+    const slots = result.rows;
+    const matchedSlots = {};
+
+    // Generate all dates in range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      matchedSlots[dateStr] = slots.filter(slot => 
+        slotMatchesDate(slot, d.toISOString())
+      );
+    }
+
+    res.json({ slots: matchedSlots });
+  } catch (error) {
+    console.error('Get date range error:', error);
+    res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+});
 
 module.exports = router;
