@@ -75,12 +75,14 @@ const profileRoutes = require('./routes/profile');
 const friendsRoutes = require('./routes/friends');
 const circlesRoutes = require('./routes/circles');
 const availabilityRoutes = require('./routes/availability');
+const eventsRoutes = require('./routes/events');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/circles', circlesRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/events', eventsRoutes);
 
 // 404 handler
 app.use((req, res) => {
