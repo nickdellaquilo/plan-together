@@ -70,20 +70,24 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Get specific user's availability (for viewing friends' schedules)
+// Get specific user's availability (for viewing friends' or circle members' schedules)
 router.get('/user/:userId', authenticateToken, async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // Verify they're friends
-    const friendCheck = await query(
+    // Check if they're friends OR share a circle
+    const accessCheck = await query(
       `SELECT 1 FROM friendships 
-       WHERE user_id = $1 AND friend_id = $2 AND status = 'accepted'`,
+       WHERE user_id = $1 AND friend_id = $2 AND status = 'accepted'
+       UNION
+       SELECT 1 FROM circle_members cm1
+       JOIN circle_members cm2 ON cm1.circle_id = cm2.circle_id
+       WHERE cm1.user_id = $1 AND cm2.user_id = $2`,
       [req.user.userId, userId]
     );
 
-    if (friendCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Can only view friends availability' });
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Can only view availability of friends or circle members' });
     }
 
     const result = await query(
