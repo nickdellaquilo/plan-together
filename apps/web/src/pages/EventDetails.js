@@ -116,7 +116,7 @@ const EventDetails = () => {
   }
 
   const myRSVP = invites.find(inv => inv.rsvp_status)?.rsvp_status;
-  const goingCount = invites.filter(inv => inv.rsvp_status === 'going').length;
+  const goingCount = invites.filter(inv => inv.rsvp_status === 'going').length + 1; // +1 for creator
   const maybeCount = invites.filter(inv => inv.rsvp_status === 'maybe').length;
   const declinedCount = invites.filter(inv => inv.rsvp_status === 'declined').length;
 
@@ -375,7 +375,7 @@ const EventDetails = () => {
           border: '1px solid #e5e7eb'
         }}>
           <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem' }}>
-            Attendees ({invites.length})
+            Attendees ({invites.length + 1})
           </h3>
 
           <div style={{
@@ -383,19 +383,73 @@ const EventDetails = () => {
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '1rem'
           }}>
+            {/* Show creator first */}
+            <div style={{
+              padding: '1rem',
+              background: '#d1fae5',
+              borderRadius: '12px',
+              border: '2px solid #10b981'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '0.5rem'
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: event.creator_avatar,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 700,
+                  flexShrink: 0
+                }}>
+                  {event.creator_name[0]}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {event.creator_name}
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#065f46',
+                textAlign: 'center',
+                fontWeight: 600
+              }}>
+                Organizer • Going
+              </div>
+            </div>
+
+            {/* Show invitees */}
             {invites.map(invite => {
               let statusColor = '#f3f4f6';
               let statusText = 'Pending';
+              let textColor = '#6b7280';
               
               if (invite.rsvp_status === 'going') {
                 statusColor = '#d1fae5';
                 statusText = 'Going';
+                textColor = '#065f46';
               } else if (invite.rsvp_status === 'maybe') {
                 statusColor = '#fef3c7';
                 statusText = 'Maybe';
+                textColor = '#92400e';
               } else if (invite.rsvp_status === 'declined') {
                 statusColor = '#fee';
                 statusText = 'Declined';
+                textColor = '#c33';
               }
 
               return (
@@ -438,7 +492,7 @@ const EventDetails = () => {
                   </div>
                   <div style={{
                     fontSize: '0.75rem',
-                    color: '#6b7280',
+                    color: textColor,
                     textAlign: 'center'
                   }}>
                     {statusText}

@@ -15,7 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
         p.display_name as creator_name,
         p.avatar_color as creator_avatar,
         ei.rsvp_status as my_rsvp,
-        (SELECT COUNT(*) FROM event_invites WHERE event_id = e.id AND rsvp_status = 'going') as going_count,
+        (SELECT COUNT(*) + 1 FROM event_invites WHERE event_id = e.id AND rsvp_status = 'going') as going_count,
         (SELECT COUNT(*) FROM event_invites WHERE event_id = e.id AND rsvp_status = 'maybe') as maybe_count,
         (SELECT COUNT(*) FROM event_invites WHERE event_id = e.id AND rsvp_status = 'declined') as declined_count,
         (SELECT COUNT(*) FROM event_invites WHERE event_id = e.id) as total_invited,
@@ -47,6 +47,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (upcoming === 'true') {
       queryText += ` AND e.event_date >= CURRENT_DATE`;
+    } else if (upcoming === 'false') {
+      queryText += ` AND e.event_date < CURRENT_DATE`;
     }
 
     queryText += ' ORDER BY e.event_date, e.start_time';

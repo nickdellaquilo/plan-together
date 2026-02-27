@@ -14,9 +14,15 @@ const Events = () => {
 
   const loadEvents = async () => {
     try {
-      const response = await eventsAPI.getMyEvents({ 
-        upcoming: filter === 'upcoming' ? 'true' : undefined 
-      });
+      const params = {};
+      
+      if (filter === 'upcoming') {
+        params.upcoming = 'true';
+      } else if (filter === 'past') {
+        params.upcoming = 'false';
+      }
+      
+      const response = await eventsAPI.getMyEvents(params);
       setEvents(response.data.events);
     } catch (error) {
       console.error('Failed to load events:', error);

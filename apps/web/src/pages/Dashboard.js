@@ -527,8 +527,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        
-
         {/* Friends List Preview */}
         {friends.length > 0 && (
           <div style={{
