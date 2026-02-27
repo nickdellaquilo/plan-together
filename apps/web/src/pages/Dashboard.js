@@ -498,33 +498,6 @@ const Dashboard = () => {
               Plan hangouts • {events.length} upcoming
             </p>
           </Link>
-
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            border: '2px solid #e5e7eb',
-            opacity: 0.5
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: '#e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '1rem'
-            }}>
-              <Calendar size={24} color="#9ca3af" />
-            </div>
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: '#9ca3af' }}>
-              Create Event
-            </h3>
-            <p style={{ margin: 0, color: '#9ca3af' }}>
-              Coming in Phase 2
-            </p>
-          </div>
         </div>
 
         {/* Friends List Preview */}
