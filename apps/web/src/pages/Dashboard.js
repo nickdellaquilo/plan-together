@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { friendsAPI } from '../services/api';
 import { Users, UserPlus, Calendar, LogOut, User, Bell, CircleDashed, Clock } from 'lucide-react';
 import WeeklyAvailability from '../components/WeeklyAvailability';
+import { eventsAPI } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ const Dashboard = () => {
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -18,12 +20,14 @@ const Dashboard = () => {
 
   const loadData = async () => {
     try {
-      const [friendsRes, requestsRes] = await Promise.all([
+      const [friendsRes, requestsRes, eventsRes] = await Promise.all([
         friendsAPI.getFriends(),
-        friendsAPI.getRequests()
+        friendsAPI.getRequests(),
+        eventsAPI.getMyEvents({ upcoming: 'true' })
       ]);
       setFriends(friendsRes.data.friends);
       setRequests(requestsRes.data.requests);
+      setEvents(eventsRes.data.events);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -253,6 +257,89 @@ const Dashboard = () => {
           <WeeklyAvailability />
         </div>
 
+        {/* Upcoming Events */}
+        {events.length > 0 && (
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            border: '1px solid #e5e7eb',
+            marginBottom: '2rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
+                Upcoming Events
+              </h3>
+              <Link to="/events" style={{
+                color: '#667eea',
+                textDecoration: 'none',
+                fontWeight: 500
+              }}>
+                View all →
+              </Link>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              {events.slice(0, 3).map(event => (
+                <Link
+                  key={event.id}
+                  to={`/events/${event.id}`}
+                  style={{
+                    padding: '1rem',
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#f9fafb'}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'start'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                        {event.title}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                        {new Date(event.event_date).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric'
+                        })} • {event.start_time.substring(0, 5)}
+                      </div>
+                    </div>
+                    {event.my_rsvp && (
+                      <div style={{
+                        padding: '0.25rem 0.75rem',
+                        background: event.my_rsvp === 'going' ? '#d1fae5' : '#fef3c7',
+                        color: event.my_rsvp === 'going' ? '#065f46' : '#92400e',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        textTransform: 'capitalize'
+                      }}>
+                        {event.my_rsvp}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div style={{
           display: 'grid',
@@ -371,6 +458,44 @@ const Dashboard = () => {
             </h3>
             <p style={{ margin: 0, color: '#6b7280' }}>
               Manage your schedule
+            </p>
+          </Link>
+
+          <Link to="/events" style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            border: '2px solid #e5e7eb',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = '#667eea';
+            e.currentTarget.style.transform = 'translateY(-4px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = '#e5e7eb';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <Calendar size={24} color="white" />
+            </div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>
+              Events
+            </h3>
+            <p style={{ margin: 0, color: '#6b7280' }}>
+              Plan hangouts • {events.length} upcoming
             </p>
           </Link>
 

@@ -9,6 +9,9 @@ import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Circles from './pages/Circles';
 import Availability from './pages/Availability';
+import Events from './pages/Events';
+import CreateEvent from './pages/CreateEvent';
+import EventDetails from './pages/EventDetails';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -120,6 +123,31 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Availability />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/events"
+              element={
+                <ProtectedRoute>
+                  <Events />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events/create"
+              element={
+                <ProtectedRoute>
+                  <CreateEvent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/events/:eventId"
+              element={
+                <ProtectedRoute>
+                  <EventDetails />
                 </ProtectedRoute>
               }
             />

@@ -83,4 +83,16 @@ export const availabilityAPI = {
   findCommonFreeTime: (data) => api.post('/availability/common-free-time', data),
 };
 
+// Events endpoints
+export const eventsAPI = {
+  getMyEvents: (params) => api.get('/events', { params }),
+  getEvent: (eventId) => api.get(`/events/${eventId}`),
+  createEvent: (data) => api.post('/events', data),
+  updateEvent: (eventId, data) => api.put(`/events/${eventId}`, data),
+  deleteEvent: (eventId) => api.delete(`/events/${eventId}`),
+  inviteUsers: (eventId, userIds) => api.post(`/events/${eventId}/invite`, { userIds }),
+  rsvp: (eventId, status) => api.put(`/events/${eventId}/rsvp`, { status }),
+  updateCircles: (eventId, circleIds) => api.put(`/events/${eventId}/circles`, { circleIds }),
+};
+
 export default api;
